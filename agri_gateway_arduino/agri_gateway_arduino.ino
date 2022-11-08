@@ -26,15 +26,17 @@ int interval = 2000;       // interval between sends
 
 /********************MQTT broker config****************************/
 const char* mqtt_server = "allmotorsltd.co.uk";
-String user_id = "7890";  //farmer id
 
+//default settings .....................................................
+String user_id = "123";  //farmer id
 String inTopic = "/inTopic/" + user_id;    //-->subscribe
 String outTopic = "/outTopic/" + user_id;  //-->publish
+//......................................................................
 
 //MQTT broker authentication.
 #define AIO_SERVERPORT 1883  // use 8883 for SSL
 #define AIO_USERNAME "sarb" //username 
-#define AIO_KEY "password" //password
+#define AIO_KEY "Shaktiman123" //password
 
 
 //interrupt pin to change wifi mode reset
@@ -187,8 +189,7 @@ void notifyLed() {
 }
 void setup() {
   pinMode(notifyPin, OUTPUT);  // Initialize the BUILTIN_LED pin as an output
-  //define interrupt pin
-  pinMode(mode_reset, INPUT_PULLUP);
+  
   attachInterrupt(digitalPinToInterrupt(mode_reset), changeWifiMode, RISING);  //interrupt for wifi mode reset
   Serial.begin(115200);
 
@@ -209,7 +210,9 @@ void setup() {
 
   EEPROM.begin(512);  //Initialasing EEPROM
   delay(10);
-  readEEPROM();
+  readEEPROM1();
+  reconfigTopics(); 
+  
   Serial.println("Disconnecting previously connected WiFi");
   WiFi.disconnect();
   delay(10);
@@ -246,23 +249,30 @@ void httpCallback() {
     server.send(500, "text/html", "error");
     return;
   }
-  esid = String(newBuffer['ssid']);
-  epass = String(newBuffer['pass']);
-  user_id = String(newBuffer['user_id']);  //farmer id
-  server.send(200, "text/html", "ok");
-
-
-  // StaticJsonBuffer<200> newBuffer;
-  // JsonObject& jObject = newBuffer.parseObject(data);
-  // esid =String(jObject["ssid"]);
-  // epass = String(jObject["pass"]);
-  // server.send(200, "text/html", "ok");
-
-  //change wifi mode to web station
-  wifi_mode = 1;
-  EEPROM.write(96, wifi_mode);
-  delay(10);
-  EEPROM.commit();  //Store data to EEPROM
+//  Serial.print("data=>"); 
+//  serializeJson(newBuffer, Serial);
+  esid = String(newBuffer["ssid"]);
+  epass = String(newBuffer["pass"]);
+  user_id = String(newBuffer["user_id"]);  //farmer id
+  Serial.print("ssid=");
+  Serial.println(esid);
+   Serial.print("pass=");
+  Serial.println(epass); 
+  Serial.print("user_id=");
+  Serial.println(user_id);
+   //time to write data to EEPROM
+   if(esid !="" && epass !="" && user_id !=""){
+    writeEEPROM(esid,epass,user_id);
+    server.send(200, "text/html", "ok");
+    //change wifi mode to web station
+    wifi_mode = 1;
+    EEPROM.write(101, wifi_mode);
+    delay(5);
+    EEPROM.commit();  //Store data to EEPROM
+   }
+   else {
+    server.send(500, "text/html", "error");
+   }
 }
 
 
@@ -270,10 +280,11 @@ void httpCallback() {
 ICACHE_RAM_ATTR void changeWifiMode() {
   wifi_mode = 0;  //change wifi mode  to access point
   Serial.println("wifi mode change to access point");
-  EEPROM.write(96, wifi_mode);
+  EEPROM.write(101, wifi_mode);
   delay(10);
   EEPROM.commit();  //Store data to EEPROM
   WiFi.disconnect();
+  millis();
 }
 
 
@@ -423,4 +434,85 @@ String splitStr(String data, char separator, int index) {
     }
   }
   return found > index ? data.substring(strIndex[0], strIndex[1]) : "";
+}
+
+//write to EEPROM 
+void writeEEPROM(String ssid, String pass, String farmer_id){
+  byte ssid_l = ssid.length();
+  byte pass_l =  pass.length();
+  byte farmer_id_l = farmer_id.length();
+  
+  EEPROM.write(0,(char) ssid_l);
+  for(int a=0 ; a<ssid_l ; a++){
+    EEPROM.write(a+1,(char) ssid.charAt(a));
+    delay(5);
+  }
+  EEPROM.write(ssid_l+1,(char) pass_l);
+  for(int a=ssid_l+1 ; a<ssid_l+pass_l+1 ; a++){
+    EEPROM.write(a+1,(char) pass.charAt(a-(ssid_l+1)));
+    delay(5);
+  } 
+  
+  EEPROM.write(ssid_l+pass_l + 2,(char) farmer_id_l);
+   for(int a=ssid_l+pass_l+2 ; a<ssid_l+pass_l+farmer_id_l+2; a++){
+    EEPROM.write(a+1,(char) farmer_id.charAt(a-(ssid_l+pass_l+2)));
+    delay(5);
+  }
+  EEPROM.commit();  //Store data to EEPROM    
+}
+
+void readEEPROM1(){
+  byte ssid_l = EEPROM.read(0);
+  byte pass_l = EEPROM.read(ssid_l+1);
+  byte farmer_id_l = EEPROM.read(ssid_l + pass_l+2);
+  //reset 
+  esid=""; 
+  epass="";
+  user_id="";  
+  Serial.print("lenngth=");
+  Serial.println(ssid_l, DEC);  
+  if((ssid_l<=30 && ssid_l>=1) && (pass_l<=30 && pass_l>=1)   && (farmer_id_l<=30 && farmer_id_l>=1)){      
+    for(int i=0; i < ssid_l; i++){
+      esid += (char) EEPROM.read(i+1); 
+     }
+     Serial.print("ssid=");
+      Serial.println(esid);  
+    for(int i=ssid_l+1; i < ssid_l + pass_l+1; i++){
+      epass += (char) EEPROM.read(i+1); 
+    }
+    Serial.print("pass=");
+      Serial.println(epass);  
+    for(int i=ssid_l + pass_l +2; i < ssid_l + pass_l + farmer_id_l+2 ; i++){ 
+      user_id += (char) EEPROM.read(i+1); 
+    }
+    Serial.print("userid=");
+      Serial.println(user_id);  
+  }
+  else{
+    esid=""; 
+    epass="";
+    user_id="";  
+  }
+
+  //mode 
+  //read wifi mode
+  wifi_mode = EEPROM.read(101);
+  Serial.print("wifi="); 
+  Serial.println(wifi_mode, DEC); 
+  delay(5);
+  if (wifi_mode != 0 && wifi_mode != 1) {
+    wifi_mode = 0;
+    EEPROM.write(101, wifi_mode);
+    delay(10);
+    EEPROM.commit();  //Store data to EEPROM
+    return;
+  }
+}
+
+void reconfigTopics(){
+  //reconfigure topics settings 
+  if(user_id !=""){
+    inTopic = "/inTopic/" + user_id;    //-->subscribe
+    outTopic = "/outTopic/" + user_id;  //-->publish
+  }
 }
