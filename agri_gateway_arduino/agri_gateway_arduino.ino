@@ -17,7 +17,7 @@ String outgoing;  // outgoing message
 String incoming = "";
 byte msgCount = 0;         // count of outgoing messages
 byte localAddress = 0xAA;  // address of this device
-byte destination = 0xBB;   // destination to send to
+byte destination = 0xBB;   // destination to send to -->deafult 0XBB
 byte deviceModel = 0;      //default device id
 long lastSendTime = 0;     // last send time
 int interval = 2000;       // interval between sends
@@ -25,7 +25,7 @@ int interval = 2000;       // interval between sends
 
 
 /********************MQTT broker config****************************/
-const char* mqtt_server = "allmotorsltd.co.uk";
+const char* mqtt_server = "broker.emqx.io";
 
 //default settings .....................................................
 String user_id = "123";  //farmer id
@@ -116,6 +116,12 @@ void callback(char* topic, byte* payload, unsigned int length) {
   byte gateway = newBuffer["gateway"];
   byte node = newBuffer["node"];
   byte deviceM = newBuffer["deviceModel"];
+  Serial.print("gateway=");
+  Serial.println(gateway);
+   Serial.print("node=");
+  Serial.println(node);
+   Serial.print("model=");
+  Serial.println(deviceM);
   //read relay data
   if (gateway != localAddress)  //gateway address not matched
     return;
@@ -125,7 +131,9 @@ void callback(char* topic, byte* payload, unsigned int length) {
   byte relays[deviceM == 0 ? 1 : 2];  //0 --> 1relay,  1-->  2relays
   for (byte r = 0; r < sizeof(relays) / sizeof(relays[0]); r++) {
     String key = "relay" + String(r);
-    String receivedStr = String(newBuffer["data"][key]);
+    String receivedStr = String(newBuffer["data"][key]);  
+    Serial.print("relay=");
+    Serial.println(receivedStr);
     if (receivedStr != "null") {
       byte* bytes = ((byte *)receivedStr.c_str()); 
       byte relay=bytes[0]-48;  
@@ -153,10 +161,12 @@ void reconnect() {
   // while (!client.connected()) {
   Serial.print("Attempting MQTT connection...");
   // Create a random client ID
-  String clientId = "ESP8266Client-";
+  String clientId = "client@123456789";
   clientId += String(random(0xffff), HEX);
   // Attempt to connect
-  if (client.connect(clientId.c_str(), AIO_USERNAME, AIO_KEY)) {
+  //if (client.connect(clientId.c_str(), AIO_USERNAME, AIO_KEY)) {
+    if (client.connect(clientId.c_str())) {
+    
     Serial.println("connected");
     // ... and resubscribe
     client.subscribe(inTopic.c_str());
@@ -195,7 +205,8 @@ void setup() {
 
   //LoRa module config ...
   LoRa.setPins(csPin, resetPin, irqPin);  // set CS, reset, IRQ pin
-  if (!LoRa.begin(868E6)) {               // initialize ratio at 915 MHz
+  
+  if (!LoRa.begin(400E6)) {               // initialize ratio at 915 MHz
     Serial.println("LoRa init failed. Check your connections.");
     while (true)
       ;  // if failed, do nothing
@@ -368,6 +379,7 @@ void publishToBroker(String dataPacket) {
       String t_packet = splitStr(dataPacket, ',', s);
       if (t_packet != "" && t_packet.startsWith("i"))
         sensors[s] = t_packet.substring(1).toFloat();
+     
       else sensors[s] = 255;  //error
     }
     //relays
@@ -390,7 +402,7 @@ void onReceive(int packetSize) {
   if (packetSize == 0) return;  // if there's no packet, return
   // read packet header bytes:
   int recipient = LoRa.read();        // recipient address
-  byte sender = LoRa.read();          // sender address
+  destination = LoRa.read();          // sender address
   deviceModel = LoRa.read();          //device id of the sender device
   byte incomingLength = LoRa.read();  // incoming msg length
   incoming = "";
@@ -468,10 +480,8 @@ void readEEPROM1(){
   //reset 
   esid=""; 
   epass="";
-  user_id="";  
-  Serial.print("lenngth=");
-  Serial.println(ssid_l, DEC);  
-  if((ssid_l<=30 && ssid_l>=1) && (pass_l<=30 && pass_l>=1)   && (farmer_id_l<=30 && farmer_id_l>=1)){      
+  user_id="";   
+  if((ssid_l<=30 && ssid_l>=1) && (pass_l<=30 && pass_l>=1)   && (farmer_id_l<=40 && farmer_id_l>=1)){      
     for(int i=0; i < ssid_l; i++){
       esid += (char) EEPROM.read(i+1); 
      }
