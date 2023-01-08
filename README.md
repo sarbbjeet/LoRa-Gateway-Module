@@ -25,8 +25,18 @@ As illustrated in the circuit schematic below, a flash reset button is used to r
 <img src="https://user-images.githubusercontent.com/9445093/211204380-8417683c-5197-4ce3-9d2e-45794c0948ff.png" width="350" height="300"> 
 </div>
 
+## MQTT client/broker interaction
+MQTT is an abbreviation for Message Queuing Telemetry Transport. It is a lightweight messaging protocol designed for usage when clients require a minimal code footprint and are linked to unstable networks or networks with restricted capacity. The primary goal is to interconnect IoT devices.
+
+<img width="650" alt="image" src="https://user-images.githubusercontent.com/9445093/211224240-e9f4c36b-0fc5-44dd-9a4f-23ddc669cf1a.png">
+
+
+
 ## JSON data format
 This JSON data format helps to publish and subscribe data from MQTT broker. 
+
+<img width="454" alt="image" src="https://user-images.githubusercontent.com/9445093/211224282-30c4c389-4fec-4b3c-ace9-7f90cc2113f2.png">
+
 1. Publish data to MQTT broker 
 ``` \outTopic/farmer_id ``` To publish data to a specific farmer ID, the given topic requires farmer id.
 This farmer id is retrieved via the android app Gateway setup page during Gateway Module network configuration.
