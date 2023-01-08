@@ -18,6 +18,7 @@ This project features LoRa communication, MQTT client/broker interaction, and da
 
 
 ## Circuit diagram and pinout 
+As illustrated in the circuit schematic below, a flash reset button is used to rewrite the ssid, password, and farmer id to the EEPROM memory of the NodeMcu. 
 <div>
 <img src="https://user-images.githubusercontent.com/9445093/211204315-8b8ad0b5-50f1-4df3-b28f-93b959d527ee.jpg" width="300" height="450"> 
 <img src="https://user-images.githubusercontent.com/9445093/211204672-922aaf1e-18c4-45a8-816c-1bd70f330496.png" width="350" height="450"> 
